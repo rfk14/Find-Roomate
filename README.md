@@ -6,7 +6,7 @@ An AI-driven roommate matching system that uses interactive questionnaire prefer
 
 - **`data_demo.ipynb`**: Interactive Jupyter Notebook featuring the user questionnaire form and candidate filtering pipeline.
 - **`profiles1.csv`**: Synthetic dataset containing 750 candidate roommate profiles across 15 behavioral and lifestyle attributes.
-- **`Data_Card.md`**: Detailed documentation covering the dataset schema, attributes, and data scope.
+- **`dataCard.md`**: Detailed documentation covering the dataset schema, attributes, and data scope.
 
 ## 🚀 How to Run the Demo
 
