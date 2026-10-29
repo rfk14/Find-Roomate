@@ -1,22 +1,52 @@
-# 🏠 Roommate Finder Agent
+# Find Roommate — AI Matching Engine & Benchmark Evaluation
 
-An AI-driven roommate matching system that uses interactive questionnaire preferences and hard-rule filtering to find optimal roommate candidates.
+An intelligent, two-tier roommate matching system built in Python. The project uses a hybrid filtering and soft-scoring approach to evaluate candidate compatibility, calibrated against ground-truth pairwise preferences.
 
-## 📁 Repository Contents
+---
 
-- **`data_demo.ipynb`**: Interactive Jupyter Notebook featuring the user questionnaire form and candidate filtering pipeline.
-- **`profiles1.csv`**: Synthetic dataset containing 750 candidate roommate profiles across 15 behavioral and lifestyle attributes.
-- **`dataCard.md`**: Detailed documentation covering the dataset schema, attributes, and data scope.
+## 🛠️ System Architecture
 
-## 🚀 How to Run the Demo
+The matching engine uses a **Two-Tier Pipeline**:
 
-1. Open `data_demo.ipynb` in VS Code or Jupyter Notebook.
-2. Run **Cell 1** to load the dataset (`profiles1.csv`).
-3. Run **Cell 2** to display the interactive questionnaire and submit your preferences.
-4. Run **Cell 3** to apply hard-rule filtering and view your matched candidate pool.
+1. **Tier 1: Hard-Rule Filter Engine**
+   - Filters candidate profiles based on strict lifestyle deal-breakers: **Work Shift** (`Night`, `Morning`, `Evening`) and **Sleep Type** (`Heavy Sleeper`, `Light Sleeper`).
+   - Includes automatic fallback safety if no exact match is found.
 
-## 🛠️ Requirements
+2. **Tier 2: Soft Scoring Engine**
+   - Evaluates retained candidates across weighted lifestyle preferences: **Cleanliness**, **Noise Tolerance**, and **Pet Compatibility**.
+   - Computes a normalized similarity score ($0.0 - 100.0\%$) and outputs ranked top candidate recommendations with plain-language matching drivers.
 
-- Python 3.x
-- `pandas`
-- `ipywidgets`
+---
+
+## 📊 Datasets & Schema
+
+- **`profiles1.csv`** (750 candidates, 15 attributes)
+  - Primary candidate pool used for interactive matching and soft scoring.
+  - Features key lifestyle attributes including work shift, sleep habits, cleanliness levels, and pet rules.
+
+- **`training_data.csv`** (1,333 pairwise evaluation rows, 31 columns)
+  - Pairwise student ratings used to benchmark and calibrate the core similarity logic.
+
+---
+
+## 📈 Benchmark Evaluation & Performance
+
+The soft scoring model was validated against 1,333 ground-truth profile pairs using an 80/20 train/test split (`random_state=42`):
+
+- **Train / Test Split:** 1,066 training pairs / 267 testing pairs
+- **Linear Calibration Equation:** $\text{score} = 0.66 \times \text{raw} + 25.40$
+- **Uncalibrated MAE:** $10.53$
+- **Calibrated MAE:** $8.43$
+- **Predict-the-Mean Baseline MAE:** $14.41$
+- **Pearson Correlation ($r$):** $0.814$
+
+*The calibrated model achieves a significant error reduction over the baseline, demonstrating strong linear correlation with human compatibility ratings.*
+
+---
+
+## 🚀 How to Run
+
+1. **Clone the repository:**
+   ```bash
+   git clone [https://github.com/rfk14/Find-Roomate.git](https://github.com/rfk14/Find-Roomate.git)
+   cd Find-Roomate
