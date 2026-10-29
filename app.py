@@ -1,8 +1,8 @@
 import streamlit as st
 import pandas as pd
 
-# Page setup - Centered full-app layout
-st.set_page_config(page_title="Find Roommate AI", page_icon="🏠", layout="wide")
+# 1. Page Config
+st.set_page_config(page_title="Roommate Matchmaker AI", page_icon="🏠", layout="wide")
 
 @st.cache_data
 def load_data():
@@ -10,51 +10,67 @@ def load_data():
 
 profiles_df = load_data()
 
-# Header Toolbar
 st.title("🏠 Roommate Matchmaker AI")
-st.caption("Interactive matching engine and profile comparison tool")
+st.caption("Interactive matching engine with configurable Deal-Breakers (Hard Rules) and Soft Preference Weights.")
 
-# --- TOP INTERACTIVE CONTROL PANEL ---
+# --- TOP CONTROL PANEL WITH DEAL-BREAKER CHECKBOXES ---
 with st.container():
-    st.subheader("⚙️ Match Preferences & Filters")
+    st.subheader("⚙️ Match Preferences & Decision Logic")
+    
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
         shift = st.selectbox("Work Shift", ["Morning", "Night", "Evening"])
+        db_shift = st.checkbox("Deal-Breaker? (Hard Rule)", value=True, key="db_shift")
+        
     with col2:
         sleep = st.selectbox("Sleep Habit", ["Light Sleeper", "Heavy Sleeper"])
+        db_sleep = st.checkbox("Deal-Breaker? (Hard Rule)", value=True, key="db_sleep")
+        
     with col3:
-        w_clean = st.slider("Cleanliness Priority", 0, 5, 3)
+        clean = st.selectbox("Cleanliness Expectation", ["Organised", "Messy", "Flexible"])
+        db_clean = st.checkbox("Deal-Breaker? (Hard Rule)", value=False, key="db_clean")
+        w_clean = st.slider("Cleanliness Priority Weight", 0, 5, 3)
+        
     with col4:
-        w_noise = st.slider("Quietness Priority", 0, 5, 3)
+        noise = st.selectbox("Noise Preference", ["Quiet", "Moderate", "Loud"])
+        db_noise = st.checkbox("Deal-Breaker? (Hard Rule)", value=False, key="db_noise")
+        w_noise = st.slider("Quietness Priority Weight", 0, 5, 3)
 
 st.divider()
 
-# --- HARD RULE FILTERING ---
-candidates = profiles_df[
-    (profiles_df['work_shift'] == shift) & 
-    (profiles_df['sleep_type'] == sleep)
-].copy()
+# --- FILTERING LOGIC (DYNAMIC HARD RULES) ---
+filtered_candidates = profiles_df.copy()
 
-# Metric Bar
+# Dynamically apply hard filters only if "Deal-Breaker" checkbox is checked
+if db_shift:
+    filtered_candidates = filtered_candidates[filtered_candidates['work_shift'] == shift]
+if db_sleep:
+    filtered_candidates = filtered_candidates[filtered_candidates['sleep_type'] == sleep]
+if db_clean:
+    filtered_candidates = filtered_candidates[filtered_candidates['cleanliness'] == clean]
+if db_noise:
+    filtered_candidates = filtered_candidates[filtered_candidates['noise_preference'] == noise]
+
+# Summary KPI Counters
 m1, m2, m3 = st.columns(3)
 m1.metric("Total Candidates in System", f"{len(profiles_df)}")
-m2.metric("Filtered Candidates", f"{len(candidates)}")
-m3.metric("Match Rate", f"{(len(candidates)/len(profiles_df))*100:.1f}%")
+m2.metric("Filtered Candidates (Passed Hard Rules)", f"{len(filtered_candidates)}")
+m3.metric("Match Rate", f"{(len(filtered_candidates)/len(profiles_df))*100:.1f}%")
 
 st.divider()
 
-if not candidates.empty:
-    # Soft Scoring Calculation
+# --- SOFT SCORING ENGINE ---
+if not filtered_candidates.empty:
     weights_sum = max(w_clean + w_noise, 1)
     
     def calculate_score(row):
-        sim_clean = 1.0 if row['cleanliness'] == 'Organised' else 0.5
-        sim_noise = 1.0 if row['noise_preference'] == 'Quiet' else 0.5
+        sim_clean = 1.0 if row['cleanliness'] == clean else 0.5
+        sim_noise = 1.0 if row['noise_preference'] == noise else 0.5
         return ((w_clean * sim_clean + w_noise * sim_noise) / weights_sum) * 100
 
-    candidates['Match_Score'] = candidates.apply(calculate_score, axis=1)
-    top_candidates = candidates.sort_values(by='Match_Score', ascending=False)
+    filtered_candidates['Match_Score'] = filtered_candidates.apply(calculate_score, axis=1)
+    top_candidates = filtered_candidates.sort_values(by='Match_Score', ascending=False)
 
     # --- APP NAVIGATION TABS ---
     tab1, tab2, tab3 = st.tabs(["🏆 Top Match Cards", "⚖️ Side-by-Side Compare", "📊 Full Candidate Table"])
@@ -62,7 +78,7 @@ if not candidates.empty:
     # TAB 1: Match Cards
     with tab1:
         st.subheader("Top Recommended Profiles")
-        for idx, (_, row) in enumerate(top_candidates.head(4).iterrows(), start=1):
+        for idx, (_, row) in enumerate(top_candidates.head(5).iterrows(), start=1):
             with st.expander(f"👤 #{idx} {row['user_name']} — {row['Match_Score']:.1f}% Match Score", expanded=True):
                 c1, c2, c3 = st.columns([1, 2, 2])
                 with c1:
@@ -80,7 +96,7 @@ if not candidates.empty:
     with tab2:
         st.subheader("Compare Candidates Head-to-Head")
         selected_names = st.multiselect(
-            "Select 2 or 3 candidates to compare:", 
+            "Select candidates to compare:", 
             options=top_candidates['user_name'].tolist(),
             default=top_candidates['user_name'].head(2).tolist()
         )
@@ -94,4 +110,4 @@ if not candidates.empty:
         st.dataframe(top_candidates, use_container_width=True)
 
 else:
-    st.error("No candidates matched those criteria. Try adjusting the dropdowns above!")
+    st.error("No candidates matched your active deal-breakers! Try unchecking one of the 'Deal-Breaker?' checkboxes above.")
